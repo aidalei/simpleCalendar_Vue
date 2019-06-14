@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=UTF-8">
+	<title>最終課題</title>
+	<style>
+		body{
+			background-color: #35495e;
+			color: white;
+		}
+		.wrapper{
+			text-align: center;
+		}
+		.calendar-wrapper{
+			display: inline-block;
+			margin: 20px;
+		}
+		.calendar-outer-container{
+			position: relative;
+			margin-top: 20px;
+			transition: opacity ease .5s;
+		}
+		.calendar-outer-container a{
+			text-decoration: none;
+		}
+		.calendar-container{
+			border-collapse: collapse;
+		}
+		.calendar-container th{
+			padding: 5px;
+			border: solid 1px #808080;
+			text-align: center;
+			background-color: rgb(115, 199, 161);
+		}
+		.calendar-container th.calendar-head{
+			background-color: #41B883;
+		}
+		.calendar-container th.sunday{
+			/* color: #FF0000; */
+			color: rgb(255, 123, 0);
+		}
+		.calendar-container th.saturday{
+			/* color: #0000FF; */
+			color: #AAFFFF;
+		}
+		.calendar-container td{
+			border: solid 1px #808080;
+			text-align: left;
+		}
+		.calendar-container td.selected{
+			/* background-color: #AAFFFF; */
+			background-color: #41B883;
+		}
+		.calendar-container td > a{
+			display: inline-block;
+			padding: 5px;
+			/* color: #303030; */
+			color: #fff;
+		}
+		.previous{
+			color: #fff;
+			float: left;
+		}
+		.next{
+			color: #fff;
+			float: right;
+		}
+		.close{
+			background-color: rgb(238, 128, 128);
+			color: #fff;
+			font-weight: bold;
+
+			display: inline-block;
+			position: absolute;
+			top: -18px;
+			right: -18px;
+			width: 16px;
+			height: 16px;
+			border: solid 1px #808080;
+			border-radius: 8px;
+			font-size: 10px;
+			line-height: 16px;
+			box-sizing: border-box;
+		}
+		.fade-enter-active, .fade-leave-active{
+			transition: opacity 0.5s ease-in-out 0s;
+		}
+		.fade-enter, .fade-leave-to{
+			opacity: 0;
+		}
+	</style>
+	<script src="https://cdn.jsdelivr.net/npm/vue@2.6.10/dist/vue.js"></script>
+</head>
+<body>
+	
+	<div id="jsi-wrapper">
+		<div class="wrapper">
+			<calendar-wrapper>開始日</calendar-wrapper>
+			<calendar-wrapper>終了日</calendar-wrapper>
+		</div>
+	</div>
+
+	<script id="jsi-calendar-wrapper" type="text/x-template">
+		<div class="calendar-wrapper">	
+			<date-input
+				:selectedDate="selectedDate"
+				@showCalendar="showCalendar"
+			><slot></slot>
+			</date-input>
+			<transition name="fade">
+				<calendar-body
+					v-if="viewState"
+					:selectedInfo="selectedInfo"
+					:calendarInfo="calendarInfo"
+					@toPrevious="toPrevious"
+					@toNext="toNext"
+					@dateSelected="dateSelected"
+					@hideCalendar="hideCalendar"
+				></calendar-body>
+			</transition>
+		</div>
+	</script>
+
+	<script id="jsi-date-input" type="text/x-template">
+		<div>
+			<span><slot></slot> : </span>
+			<input 
+				@focus="$emit('showCalendar')"
+				:value="selectedDate" 
+				type="text" 
+				readonly />
+		</div>
+	</script>
+
+	<script id="jsi-calendar-body" type="text/x-template">
+		<div class="calendar-outer-container">
+			<a @click="$emit('hideCalendar')" href="#" class="close">×</a>
+			<table class="calendar-container">
+				<thead>
+					<tr>
+						<th class="calendar-head" colspan="7" >
+							<a @click="$emit('toPrevious')" href="#" class="previous">先月</a>
+							<span>{{calendarInfo.year}}年{{calendarInfo.month}}月</span>
+							<a @click="$emit('toNext')" href="#" class="next">翌月</a>
+						</th>
+					</tr>
+					<tr>
+						<th class="sunday">日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th class="saturday">土</th>
+					</tr>
+				</thead>
+				<tbody>
+					<tr v-for="calendar in calendarInfo.data">
+						<td 
+							v-for="date in calendar"
+							:class="{selected: calendarInfo.year == selectedInfo.year &&
+											   calendarInfo.month == selectedInfo.month &&
+											   selectedInfo.date == date	
+									 }"
+						><a  @click="dateSelected($event)" href="#" >{{date}}</a>
+						</td>
+					</tr>
+				</tbody>
+			</table>
+		</div>
+	</script>
+
+	<script type="text/javascript">
+
+		const calendar = {
+			init: function(year, month){
+				this.calendarArr = []
+				this.build(year, month);
+				return this.calendarArr;
+			},
+			build: function(year, month){
+				this.year = year;
+				this.month = month;
+				let	firstDate = new Date(this.year, this.month, 1),
+					firstDay = firstDate.getDay(),
+					lastDate = new Date(this.year, this.month+1, 0),
+					lastDay = lastDate.getDay(),
+					lastDateCount = lastDate.getDate(),
+					dayCount = 1;
+
+				let calendarData = [[],[],[],[],[],[]];
+
+				for(let i = 0; i < calendarData.length; i++){
+					for(let d = 0; d < 7; d++){
+						if(i == 0 && d < firstDay){
+							calendarData[i].push('');
+						}else if(dayCount > lastDateCount){
+							calendarData[i].push('');
+						}else{
+							calendarData[i].push(dayCount);
+							dayCount ++;
+						}
+					}
+				}
+
+				let check = true;
+				for(let i = 0; i < calendarData[calendarData.length - 1].length; i++){
+					check = calendarData[calendarData.length - 1][i] == ''?false:true;
+					if(check){
+						break
+					}
+				}
+				if(!check){
+					calendarData.pop();
+				}
+
+				this.calendarArr = calendarData;
+			},
+		}
+	
+		
+		const dateInput = Vue.extend({
+				template: '#jsi-date-input',
+				props: ['selectedDate'],
+			})
+
+
+		const calendarBody = Vue.extend({
+			template: '#jsi-calendar-body',
+			props: ['calendarInfo','selectedInfo'],
+			methods: {
+				dateSelected: function(e){
+					const selectedDate = e.target.innerText;
+					this.$emit('dateSelected', selectedDate);
+				},
+			}
+		})
+
+		const calendarWrapper = Vue.extend({
+			template: '#jsi-calendar-wrapper',
+			components: {
+				'date-input': dateInput,
+				'calendar-body': calendarBody
+			},
+			beforeCreate: function(){
+				let dateObj = new Date(),
+					year = dateObj.getFullYear(),
+					month = dateObj.getMonth(),
+					today = dateObj.getDate();
+				
+				this.calendarData = calendar.init(year, month);
+				this.year = year;
+				this.month = month + 1;
+				this.today = today;
+			},
+			data: function(){
+				return{
+					calendarInfo:{
+						data: this.calendarData,
+						year: this.year,
+						month: this.month
+					},
+					selectedInfo:{
+						date: this.today,
+						year: this.year,
+						month: this.month,
+					},
+					selectedDate: '',
+					viewState: false
+				}
+			},
+			methods:{
+				toPrevious: function(){
+					this.calendarInfo.month--;
+					if(this.calendarInfo.month == 0){
+						this.calendarInfo.month = 12;
+						this.calendarInfo.year--;
+					}
+					this.newCalender();
+				},
+				toNext: function(){
+					this.calendarInfo.month++;
+					if(this.calendarInfo.month == 13){
+						this.calendarInfo.month = 1;
+						this.calendarInfo.year++;
+					}
+					this.newCalender();
+				},
+				newCalender: function(){
+					let year = this.calendarInfo.year,
+						month = this.calendarInfo.month -1;
+					this.calendarInfo.data = calendar.init(year, month);
+				},
+				dateSelected: function(selectedDate, selectedYear = this.calendarInfo.year, selectedMonth = this.calendarInfo.month){
+					if(!selectedDate){
+						return;
+					}
+					this.selectedInfo.date = selectedDate;
+					this.selectedInfo.year = selectedYear;
+					this.selectedInfo.month = selectedMonth;
+					this.selectedDate = `${this.selectedInfo.year}/${this.selectedInfo.month}/${this.selectedInfo.date}`;
+				},
+				showCalendar: function(){
+					this.viewState = true;
+					this.selectedDate = `${this.selectedInfo.year}/${this.selectedInfo.month}/${this.selectedInfo.date}`;
+				},
+				hideCalendar: function(){
+					if(this.selectedDate == ''){
+						this.dateSelected(this.today, this.year, this.month);
+					}
+					this.calendarInfo.year = this.selectedInfo.year;
+					this.calendarInfo.month = this.selectedInfo.month;
+					this.viewState = false;
+				}
+			}
+		});
+
+		new Vue({
+			el: '#jsi-wrapper',
+			components: {
+				'calendar-wrapper': calendarWrapper
+			}
+		});
+	</script>
+
+</body>
+</html>
